@@ -1,0 +1,5 @@
+requests           # cliente HTTP para a API Fattureweb
+truststore          # usa o trust store do SO (CA corporativa); evita CERTIFICATE_VERIFY_FAILED
+pydantic-settings   # configuração via .env (Pydantic Settings)
+pandas              # tabela/DataFrame do resultado
+pandas-gbq          # carga create-or-replace no BigQuery (to_gbq if_exists="replace"); auth via ADC

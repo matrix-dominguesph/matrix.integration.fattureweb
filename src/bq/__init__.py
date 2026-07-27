@@ -1,0 +1,1 @@
+"""Carga no BigQuery."""
