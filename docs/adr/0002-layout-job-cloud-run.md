@@ -1,8 +1,14 @@
-# ADR 0001 — Layout de repositório do monitor Fattureweb como Cloud Run Job
+# ADR 0002 — Layout do repositório de ingestão (Cloud Run Job)
 
 - Status: aceito
 - Data: 2026-07-24
 - Autor: Arquimedes
+- Nota (2026-07-30): incorporado ao conjunto canônico do repo-âncora `…job` como
+  **ADR 0002** (era ADR 0001 do repo de backend, antes da separação em 3 camadas —
+  ver [[0001-arquitetura-3-camadas]]). Descreve o layout `src/` da **camada de
+  ingestão** (`…webcrawler.job`). Onde o texto abaixo cita `.env.example`, leia
+  `env.example` (renomeado por regra de push protection do org). Conteúdo original
+  preservado.
 
 ## Contexto
 

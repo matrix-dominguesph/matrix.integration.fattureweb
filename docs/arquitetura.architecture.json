@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Monitor de Aquisição de Fatura (Fattureweb)",
+    "subtitle": "Arquitetura em 3 camadas — raw → refined → apresentação (BQ como contrato)",
+    "output": "arquitetura.html"
+  },
+  "components": [
+    { "id": "fattureweb", "type": "external", "label": "Fattureweb", "sublabel": "site · crawler · API · e-mail", "pos": [40, 210], "size": [130, 60] },
+    { "id": "job", "type": "backend", "label": "Job de Ingestão", "sublabel": "…webcrawler.job", "pos": [230, 210], "size": [130, 60] },
+    { "id": "raw", "type": "database", "label": "tb_fatura_raw", "sublabel": "nível fatura + origem", "pos": [420, 210], "size": [130, 60] },
+    { "id": "backend", "type": "backend", "label": "Job de Regras", "sublabel": "…webcrawler.backend", "pos": [610, 210], "size": [130, 60] },
+    { "id": "refined", "type": "database", "label": "tabelas refinadas", "sublabel": "hist · faturas dashboard", "pos": [800, 210], "size": [130, 60] },
+    { "id": "frontend", "type": "frontend", "label": "Dashboard", "sublabel": "…frontend · Next.js · SSO", "pos": [990, 210], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Camada 1 · Ingestão (raw)", "wraps": ["job"] },
+    { "kind": "region", "label": "Camada 2 · Regras de negócio (refined)", "wraps": ["backend"] },
+    { "kind": "region", "label": "Camada 3 · Apresentação", "wraps": ["frontend"] }
+  ],
+  "connections": [
+    { "id": "fw-job", "from": "fattureweb", "to": "job", "label": "coleta", "variant": "emphasis" },
+    { "id": "job-raw", "from": "job", "to": "raw", "label": "grava", "variant": "emphasis" },
+    { "id": "raw-bk", "from": "raw", "to": "backend", "label": "lê", "variant": "emphasis" },
+    { "id": "bk-refined", "from": "backend", "to": "refined", "label": "materializa", "variant": "emphasis" },
+    { "id": "refined-fe", "from": "refined", "to": "frontend", "label": "lê direto", "variant": "emphasis" }
+  ],
+  "cards": []
+}
