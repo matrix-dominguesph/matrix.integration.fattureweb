@@ -1,1 +1,1 @@
-"""Carga no BigQuery."""
+"""Carga e leitura no BigQuery."""

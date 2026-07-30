@@ -18,10 +18,14 @@ class Settings(BaseSettings):
     FATTUREWEB_USERNAME: str = ""
     FATTUREWEB_PASSWORD: str = ""
 
-    # --- Destino BigQuery (create-or-replace; auth via ADC) ------------------
+    # --- Destino BigQuery (auth via ADC) -------------------------------------
     GCP_PROJECT: str = ""
     BQ_DATASET: str = ""
+    # Status por instalação — SEMPRE create-or-replace (snapshot completo).
     BQ_TABLE: str = ""
+    # Nível fatura — mesmo projeto/dataset, só o nome muda. Primeira execução é
+    # snapshot completo; as seguintes são update incremental (append).
+    BQ_TABLE_FATURAS: str = "tb_faturas_matrix_facil_b"
 
     # --- Tuning do pipeline --------------------------------------------------
     PAGE_SIZE: int = 180
@@ -30,6 +34,9 @@ class Settings(BaseSettings):
     # Enriquecimento webcrawler: nº de instalacao_id por chamada. Limita o tamanho
     # da querystring — um CSV com TODOS os ids de uma vez estoura a URL.
     WEBCRAWLER_CHUNK_SIZE: int = 20
+    # Força snapshot completo da tabela nível fatura (create-or-replace), ignorando o
+    # MAX(data_criacao) já gravado. Use para reprocessar a base do zero.
+    FATURAS_FULL_REFRESH: bool = False
 
     # --- Escopo de coleta ----------------------------------------------------
     # Clientes da carteira 2768 ("MATRIX FÁCIL B"). Estender a outras carteiras

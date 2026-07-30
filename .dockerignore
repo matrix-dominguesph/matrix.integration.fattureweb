@@ -1,0 +1,27 @@
+# O Dockerfile faz `COPY . .`, então tudo o que não estiver aqui vai para dentro da imagem.
+# O .gitignore protege o repositório; NÃO protege o build. Sem este arquivo, um build local
+# assa o .env (com a senha do Fattureweb em plaintext) numa camada da imagem — e a imagem
+# vai para o Artifact Registry.
+
+# --- Segredos: o motivo principal deste arquivo ------------------------------
+.env
+*.env
+**/.env
+# `env.example` (sem ponto na frente) não casa com os padrões acima e continua na imagem,
+# de propósito: serve de documentação das variáveis esperadas.
+
+# --- Histórico e metadados do git --------------------------------------------
+.git
+.gitignore
+.github
+
+# --- Não é necessário em runtime ---------------------------------------------
+testes/
+docs/
+README.md
+.vscode/
+
+# --- Bytecode ----------------------------------------------------------------
+__pycache__/
+**/__pycache__/
+*.py[cod]
