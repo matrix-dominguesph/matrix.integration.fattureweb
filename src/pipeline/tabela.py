@@ -17,6 +17,13 @@ _COLUNAS = {
     'status_webcrawler_id': 'status_webcrawlers_id',
     'erro_processamento': 'erro_processamento',
     'descricao_status_webcrawler': 'descricao_status_webcrawler',
+    # `status` do /instalacoes é a instalação estar ATIVA na carteira, e não tem relação
+    # com o status do crawler — daí o nome de saída ser explícito. A API oferece os
+    # endpoints Ativar/Inativar e o filtro `?status=true|false`; nós coletamos as duas e
+    # marcamos, para não perder de vista a UC cancelada. Medido em 2026-07-31: 845 ativas
+    # e 10 inativas nas 855 da carteira. Sem esta coluna, as 10 canceladas entravam no
+    # denominador da cobertura como se fossem carteira ativa.
+    'instalacao_ativa': 'status',
 }
 
 # Campos que o /instalacoes deve retornar (o header Fatture-SearchFields controla

@@ -5,6 +5,10 @@
 
 from __future__ import annotations
 
+from src.config import Settings, settings
+
+from src.pipeline.tabela import CAMPOS_INSTALACAO, montar_tabela
+from src.pipeline.webcrawler import enriquecer_com_data_fim
 from src.pipeline.faturas import (
     COLUNAS_SAIDA,
     TENTATIVAS_REPESCA,
@@ -18,6 +22,68 @@ from testes import Checador
 from testes.falso_fattureweb import FattureWebFalso, registro
 
 c = Checador("Testes unitários — pipeline.faturas (offline)")
+
+# ---------------------------------------------------------------------------------------
+c.secao("ingestão de instalações: coluna instalacao_ativa")
+
+inst = montar_tabela([
+    {"id": 1, "cliente_apelido": "MATRIX FÁCIL B - COOPERATIVA", "distribuidora_sigla": "ceal",
+     "status_webcrawlers_id": 10, "erro_processamento": "",
+     "descricao_status_webcrawler": "ok", "status": True},
+    {"id": 2, "cliente_apelido": "MATRIX FÁCIL B - ASSOCIAÇÃO", "distribuidora_sigla": "cemigd",
+     "status_webcrawlers_id": 4, "erro_processamento": "",
+     "descricao_status_webcrawler": "credencial", "status": False},
+    # registro sem a chave `status` (a API pode omitir): não deve estourar
+    {"id": 3, "cliente_apelido": "x", "distribuidora_sigla": "ems",
+     "status_webcrawlers_id": 6, "erro_processamento": "", "descricao_status_webcrawler": "y"},
+])
+c.checa("instalacao_ativa existe na tabela", "instalacao_ativa" in inst.columns,
+        str(list(inst.columns)))
+c.checa("vem do campo `status` do /instalacoes",
+        inst["instalacao_ativa"].tolist()[:2] == [True, False])
+c.checa("registro sem a chave `status` vira None (não estoura)",
+        inst["instalacao_ativa"].isna().iloc[2])
+c.checa("`status` está na projeção pedida à API", "status" in CAMPOS_INSTALACAO,
+        str(CAMPOS_INSTALACAO))
+c.checa("instalacao_ativa é o nome de saída, não `status` (evita confundir com o do crawler)",
+        "status" not in inst.columns)
+
+
+# ---------------------------------------------------------------------------------------
+c.secao("enriquecimento consulta TODAS as instalações, não só as em erro")
+
+
+class _WebcrawlerFalso:
+    """Dublê de /webcrawlers/execucoes: registra quais ids foram consultados."""
+
+    def __init__(self):
+        self.base_url = "https://falso.test"
+        self.consultados: set = set()
+
+    def request(self, method, path, **kwargs):
+        params = kwargs.get("params") or {}
+        ids = [int(x) for x in str(params.get("instalacao_id", "")).split(",") if x]
+        self.consultados.update(ids)
+        dados = [{"instalacao_id": i, "data_fim": f"2026-07-{(i % 28) + 1:02d}T10:00:00-03:00"}
+                 for i in ids]
+
+        class R:
+            @staticmethod
+            def json():
+                return {"status": "sucesso", "dados": dados}
+
+        return R()
+
+
+falso = _WebcrawlerFalso()
+enriquecido, avisos_wc = enriquecer_com_data_fim(falso, inst, page_size=180, max_workers=2,
+                                                chunk_size=20)
+c.checa("consultou a UC em SUCESSO também (antes ela era pulada)",
+        1 in falso.consultados, f"consultados={sorted(falso.consultados)}")
+c.checa("consultou as 3 UCs", falso.consultados == {1, 2, 3}, str(sorted(falso.consultados)))
+c.checa("data_fim preenchido para todas, inclusive a de sucesso",
+        enriquecido["data_fim"].notna().all(), str(enriquecido["data_fim"].tolist()))
+c.checa("sem avisos", avisos_wc == [], str(avisos_wc))
 
 # ---------------------------------------------------------------------------------------
 c.secao("montar_tabela_faturas")
@@ -229,5 +295,19 @@ final3 = combinar(final2, lote2)
 c.checa("2ª execução seguida não muda a tabela",
         len(final3) == len(final2) and set(final3['id_fatura']) == set(final2['id_fatura']),
         f"{len(final3)} vs {len(final2)}")
+
+
+# ---------------------------------------------------------------------------------------
+c.secao("o .env não depende do diretório de onde se roda")
+
+from pathlib import Path as _Path  # noqa: E402
+
+_env = Settings.model_config.get("env_file")
+c.checa("env_file é caminho ABSOLUTO", _Path(str(_env)).is_absolute(), str(_env))
+c.checa("aponta para a raiz deste repo",
+        _Path(str(_env)).parent == _Path(__file__).resolve().parent.parent,
+        str(_Path(str(_env)).parent))
+c.checa("não é o './.env' relativo (quebrava ao rodar de outra pasta)",
+        str(_env) not in (".env", "./.env"), str(_env))
 
 c.encerrar()

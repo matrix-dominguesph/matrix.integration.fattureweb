@@ -7,11 +7,20 @@ Qualquer campo pode ser sobrescrito por variável de ambiente de mesmo nome
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# O .env fica na RAIZ DO REPO, e o caminho é resolvido a partir deste arquivo — não do
+# diretório de onde se chamou o Python. Com `env_file=".env"` relativo, rodar
+# `python caminho/para/job/src/main.py` de outra pasta carregava um .env inexistente em
+# silêncio: as credenciais ficavam vazias e o erro aparecia lá na frente como
+# "Invalid URL '/auth/login': No scheme supplied", que não aponta para a causa.
+_RAIZ_DO_REPO = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_RAIZ_DO_REPO / ".env", extra="ignore")
 
     # --- Credenciais do FattureWeb (via env; nunca commitadas) ---------------
     FATTUREWEB_BASE_URL: str = ""
@@ -30,7 +39,6 @@ class Settings(BaseSettings):
     # --- Tuning do pipeline --------------------------------------------------
     PAGE_SIZE: int = 180
     MAX_WORKERS: int = 8
-    STATUS_SUCESSO_ID: int = 10  # status_webcrawler_id de sucesso (não enriquece)
     # Enriquecimento webcrawler: nº de instalacao_id por chamada. Limita o tamanho
     # da querystring — um CSV com TODOS os ids de uma vez estoura a URL.
     WEBCRAWLER_CHUNK_SIZE: int = 20

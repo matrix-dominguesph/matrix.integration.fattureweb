@@ -13,7 +13,7 @@ Fluxo fim-a-fim (7 etapas):
   1. auth               — TokenSession.login()
   2. coleta             — listar_instalacoes (carteira -> clientes -> instalações)
   3. modelagem          — montar_tabela (6 colunas)
-  4. enriquecimento     — maior data_fim do webcrawler p/ status != sucesso
+  4. enriquecimento     — maior data_fim do webcrawler de TODAS as instalações
   5. carga              — create-or-replace no BigQuery
   6. faturas            — tabela gravada -> corte -> /faturas por cliente_id -> upsert
   7. carga das faturas  — create-or-replace da tabela combinada
@@ -85,14 +85,15 @@ def main() -> None:
     # 3. Modelagem (tabela base de 6 colunas).
     df = montar_tabela(instalacoes)
 
-    # 4. Enriquecimento: maior data_fim do webcrawler (só status != sucesso),
-    #    em blocos de WEBCRAWLER_CHUNK_SIZE ids por chamada (teto da URL).
+    # 4. Enriquecimento: maior data_fim do webcrawler de TODAS as instalações, em
+    #    blocos de WEBCRAWLER_CHUNK_SIZE ids por chamada (teto da URL). Inclui as em
+    #    sucesso, senão não se sabe QUANDO o crawler teve sucesso — e a tela precisa
+    #    disso para dizer se o status é do mês corrente.
     df, avisos_wc = enriquecer_com_data_fim(
         ts,
         df,
         page_size=settings.PAGE_SIZE,
         max_workers=settings.MAX_WORKERS,
-        status_sucesso_id=settings.STATUS_SUCESSO_ID,
         chunk_size=settings.WEBCRAWLER_CHUNK_SIZE,
     )
     _reportar_avisos("webcrawler", avisos_wc)

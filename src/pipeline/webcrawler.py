@@ -1,7 +1,11 @@
 """Enriquecimento: adiciona a maior ``data_fim`` de execução do webcrawler.
 
-Só as instalações que NÃO estão em sucesso (``status_webcrawler_id != STATUS_SUCESSO_ID``)
-são consultadas em ``GET /webcrawlers/execucoes/``.
+**Todas** as instalações são consultadas em ``GET /webcrawlers/execucoes/``. Antes só as que
+NÃO estavam em sucesso eram — economia de requisições que custava caro na leitura: para uma
+UC em sucesso não se sabia *quando* o crawler teve sucesso, só que teve. Medido em
+2026-07-31: 235 das 855 UCs ficavam sem ``data_fim`` por causa disso, e sem essa data a
+tela não consegue dizer se o status é do mês corrente ou de meses atrás (24 eram de junho e
+5 de maio). Custo de trazer todas: ~11 requisições a mais por execução (32 -> 43 blocos).
 
 Estratégia por CHUNKS (evita estourar o tamanho da URL): os ``instalacao_id`` são
 fatiados em blocos de ``WEBCRAWLER_CHUNK_SIZE`` (default 20). Cada bloco vira uma
@@ -76,17 +80,15 @@ def enriquecer_com_data_fim(
     *,
     page_size: int = 180,
     max_workers: int = 8,
-    status_sucesso_id: int = 10,
     chunk_size: int = 20,
 ) -> tuple[pd.DataFrame, list]:
     """Adiciona a coluna ``data_fim`` (maior data de execução do crawler).
 
     Args:
         ts: sessão autenticada.
-        df: tabela base (precisa de ``id_instalacao`` e ``status_webcrawler_id``).
+        df: tabela base (precisa de ``id_instalacao``).
         page_size: ``limit`` na paginação dentro de cada bloco.
         max_workers: threads paralelas sobre os BLOCOS.
-        status_sucesso_id: status considerado sucesso (não é consultado).
         chunk_size: nº de ``instalacao_id`` por chamada (teto do CSV na URL).
 
     Returns:
@@ -95,9 +97,9 @@ def enriquecer_com_data_fim(
     """
     df = df.copy()
 
-    # Só as instalações que falharam (status != sucesso) são consultadas.
-    falhou = df['status_webcrawler_id'] != status_sucesso_id
-    ids = [i for i in df.loc[falhou, 'id_instalacao'].tolist() if i is not None]
+    # TODAS as instalações, inclusive as em sucesso: sem a data da última execução não se
+    # sabe se o status exibido é do mês corrente ou de meses atrás (ver docstring do módulo).
+    ids = [i for i in df['id_instalacao'].tolist() if i is not None]
     ids = list(dict.fromkeys(ids))  # únicos, preservando ordem
 
     if not ids:
