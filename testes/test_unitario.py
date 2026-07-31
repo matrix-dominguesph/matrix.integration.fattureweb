@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from src.config import Settings, settings
+from src.config import Settings
 
 from src.pipeline.tabela import CAMPOS_INSTALACAO, montar_tabela
 from src.pipeline.webcrawler import enriquecer_com_data_fim
