@@ -1,6 +1,7 @@
 # ADR 0001 — Arquitetura em 3 camadas do Monitor de Aquisição de Fatura (Fattureweb)
 
 - Status: aceito
+- **Atualizado em 2026-07-31** — a decisão segue válida; ver "Atualização" no fim.
 - Data: 2026-07-30
 - Autor: Arquimedes
 - Escopo: canônico do projeto (repo-âncora `matrix.fattureweb.webcrawler.job`)
@@ -105,3 +106,35 @@ tabela, não uma chamada direta entre serviços.
 - **Manter 2 camadas (job + front, sem camada de negócio)** — rejeitada: as regras
   (classificação da origem da captura, histórico diário) precisam de um lugar que não
   seja a ingestão crua nem a UI; espremê-las no job ou no front fere a coesão.
+
+## Atualização — 2026-07-31
+
+A decisão das **três camadas com o BigQuery como contrato** segue válida e foi implementada
+como descrita. Um detalhe da descrição mudou.
+
+O texto acima cita, como exemplo do que a camada de regras de negócio materializa, um
+**histórico diário `tb_hist_status_webcrawler`** — inclusive no diagrama. Essa tabela **foi
+retirada do escopo** (ver PRD canônico) e não existe. As tabelas refinadas que a camada
+produz hoje são seis, todas `CREATE OR REPLACE` a cada execução:
+
+| Tabela | Grão | Para quê |
+|---|---|---|
+| `tb_refined_cliente_por_uc` | UC | base: resolve o nome do cliente por UC |
+| `tb_refined_uc_status` | UC | aba "Status Webcrawler" |
+| `tb_refined_cliente_faturas` | cliente | aba "Faturas", tabela principal |
+| `tb_refined_fatura_historico` | fatura | drilldown do cliente |
+| `tb_refined_origem_mensal` | mês × origem | gráfico de 12 meses |
+| `tb_refined_kpis` | 1 linha | cards das duas abas |
+
+Consequência que vale registrar, porque contraria a expectativa do texto original: **não há
+snapshot histórico do estado do crawler**. Existe série temporal de faturas emitidas
+(`tb_refined_origem_mensal`), não de quantas UCs estavam em erro em cada dia. Retomar isso
+exige uma tabela em modo **append**, que seria a única exceção ao padrão create-or-replace
+desta camada — e é justamente por isso que virou decisão de escopo em vez de detalhe de
+implementação.
+
+O restante da decisão se confirmou na prática, inclusive os custos previstos: o schema das
+tabelas é de fato o contrato cross-repo, e a coordenação entre três repos exigiu disciplina —
+a camada refinada ganhou um guarda-corpo que confere as colunas das tabelas cruas antes de
+rodar, para que um schema desatualizado na ingestão dê mensagem acionável em vez de erro de
+SQL.
