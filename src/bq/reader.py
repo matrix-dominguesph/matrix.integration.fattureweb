@@ -49,18 +49,42 @@ def tabela_faturas_existe() -> bool:
     return int(_ler(query)['n'].iloc[0]) > 0
 
 
+def _colunas_gravadas() -> set[str]:
+    """As colunas que a tabela nível fatura tem HOJE no BigQuery."""
+    query = f"""
+        SELECT column_name
+        FROM `{settings.GCP_PROJECT}.{settings.BQ_DATASET}.INFORMATION_SCHEMA.COLUMNS`
+        WHERE table_name = '{settings.BQ_TABLE_FATURAS}'
+    """
+    return set(_ler(query)['column_name'])
+
+
 def ler_faturas() -> pd.DataFrame | None:
     """A tabela nível fatura como está gravada hoje.
 
+    Lê a **interseção** de ``COLUNAS_SAIDA`` com o que a tabela realmente tem, em vez de
+    exigir as duas listas iguais. É o que faz uma coluna NOVA (como ``data_vencimento``) não
+    quebrar a leitura da tabela velha com um "Name ... not found" do BigQuery, que não diz
+    que o problema é a tabela estar num schema anterior. A coluna que falta chega vazia e o
+    ``combinar`` a preenche no ``reindex``: as linhas antigas ficam com ela nula e as que a
+    API devolver vêm completas. Um full refresh (apagar a tabela, ou ``FATURAS_FULL_REFRESH``)
+    preenche o histórico todo de uma vez — mas é escolha, não requisito.
+
     Returns:
-        O DataFrame com as colunas de ``COLUNAS_SAIDA``, ou ``None`` se a tabela ainda não
-        existe (o que o ``main`` lê como "primeira execução -> snapshot completo").
+        O DataFrame com as colunas de ``COLUNAS_SAIDA`` presentes na tabela, ou ``None`` se a
+        tabela ainda não existe (o que o ``main`` lê como "primeira execução -> snapshot
+        completo").
     """
     if not tabela_faturas_existe():
         print("Faturas: tabela ainda não existe -> snapshot completo.")
         return None
 
-    df = _ler(f"SELECT {', '.join(COLUNAS_SAIDA)} FROM `{_tabela_faturas()}`")
+    gravadas = _colunas_gravadas()
+    a_ler = [c for c in COLUNAS_SAIDA if c in gravadas]
+    if faltando := [c for c in COLUNAS_SAIDA if c not in gravadas]:
+        print(f"Faturas: tabela sem a(s) coluna(s) {faltando} -> virão vazias nas linhas já gravadas.")
+
+    df = _ler(f"SELECT {', '.join(a_ler)} FROM `{_tabela_faturas()}`")
     if df.empty:
         print("Faturas: tabela existe mas está vazia -> snapshot completo.")
         return None

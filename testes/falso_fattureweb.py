@@ -133,6 +133,12 @@ def registro(
         'conteudo': None if conteudo_nulo else {
             'fatura_origem': origem,
             'unidade_consumidora': {'nome': nome},
-            'fatura': {'data_emissao': f'2026-06-{dia:02d} 03:00:00+00:00'},
+            # Emissão em junho, vencimento no mês seguinte — é o que a API devolve (na amostra
+            # real a emissão foi 2026-07-28 e o vencimento 2026-08-10). Mesmo dia do mês só
+            # para o dublê ficar previsível; o que os testes checam é vencimento > emissão.
+            'fatura': {
+                'data_emissao': f'2026-06-{dia:02d} 03:00:00+00:00',
+                'data_vencimento': f'2026-07-{dia:02d} 03:00:00+00:00',
+            },
         },
     }

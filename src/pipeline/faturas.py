@@ -110,6 +110,10 @@ CAMPOS_FATURA = [
 #   origem              -> "Origem"       (SITE · API · WEBCRAWLER · EMAIL — e o que vier:
 #                                          é passthrough, não há enum no código)
 #   data_emissao        -> "Data Emissão"
+#   data_vencimento     -> "Vencimento"    (do documento, não do sistema: quando o cliente
+#                                           precisa pagar. Vem em `conteudo.fatura`, ao lado
+#                                           da emissão, e estava em 60/60 faturas na amostra
+#                                           que conferi na API antes de adicionar.)
 #   data_criacao        -> "Data Criação"      (inserção no sistema; base do corte)
 #   data_atualizacao    -> "Data Atualização"  (é o campo que o filtro incremental usa;
 #                                               > data_criacao = fatura reprocessada)
@@ -120,6 +124,7 @@ COLUNAS_SAIDA = [
     'id_instalacao',
     'origem',
     'data_emissao',
+    'data_vencimento',
     'data_criacao',
     'data_atualizacao',
 ]
@@ -331,6 +336,7 @@ def montar_tabela_faturas(registros: list) -> pd.DataFrame:
             'id_instalacao': reg.get('instalacao_id'),
             'origem': conteudo.get('fatura_origem'),
             'data_emissao': fatura.get('data_emissao'),
+            'data_vencimento': fatura.get('data_vencimento'),
             'data_criacao': reg.get('data_criacao'),
             'data_atualizacao': reg.get('data_atualizacao'),
         })

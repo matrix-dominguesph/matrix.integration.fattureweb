@@ -96,7 +96,10 @@ df = montar_tabela_faturas([
 c.checa("colunas na ordem esperada", list(df.columns) == COLUNAS_SAIDA, str(list(df.columns)))
 c.checa("id_fatura vem de dados[i].id", df['id_fatura'].tolist() == [1, 2, 3])
 c.checa("conteudo=None não estoura e vira None",
-        bool(df.loc[1, ['origem', 'cliente_instalacao', 'data_emissao']].isna().all()))
+        bool(df.loc[1, ['origem', 'cliente_instalacao', 'data_emissao', 'data_vencimento']].isna().all()))
+c.checa("data_vencimento sai de conteudo.fatura, ao lado da emissão",
+        df.loc[0, 'data_vencimento'] > df.loc[0, 'data_emissao'],
+        f"emissao={df.loc[0, 'data_emissao']} vencimento={df.loc[0, 'data_vencimento']}")
 c.checa("data_criacao e data_atualizacao são colunas distintas",
         df.loc[2, 'data_atualizacao'] > df.loc[2, 'data_criacao'],
         "fatura reprocessada: atualizacao > criacao")
